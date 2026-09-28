@@ -1,46 +1,41 @@
 # Gutermann CLI Q&A Agent
 
-Local RAG-based product knowledge assistant for the technical assessment.
+A local RAG-based CLI question-answering agent for the Gutermann water leak detection product knowledge base.
 
-## Current architecture
+The agent retrieves relevant product information from a local knowledge base and generates grounded answers using a local Ollama language model.
 
-- Markdown/product-aware ingestion
-- One chunk per product with category/product/page metadata
-- Local Ollama LLM
-- Ollama embeddings
+## Current Architecture
+
+- Markdown/product-aware knowledge base
+- One chunk per product with product and category metadata
+- Sentence Transformers embeddings
 - ChromaDB local vector store
 - BM25 keyword retrieval
-- Hybrid retrieval
-- Controlled TOP_K / FETCH_K
-- MMR-style diversity selection
-- Triage, memory, query rewriting and grounded generation modules
+- Hybrid retrieval combining semantic and lexical search
+- Controlled `TOP_K` and retrieval candidate limits
+- Query relevance checking
+- Triage for greetings, questions, follow-ups, and out-of-scope requests
+- Conversation memory
+- Follow-up question resolution
+- Grounded local LLM generation
+- Ollama-based local inference
 
 ## Models
 
 - LLM: `qwen2.5:3b`
-- Embeddings: `nomic-embed-text`
+- Embeddings: `sentence-transformers/all-MiniLM-L6-v2`
 
-## First setup
+## Requirements
+
+- Python
+- Ollama
+- Qwen 2.5 3B model
+- Python packages listed in `requirements.txt`
+
+## First Setup
+
+Create and activate the virtual environment:
 
 ```powershell
-ollama pull nomic-embed-text
 python -m venv venv
 .\venv\Scripts\Activate.ps1
-pip install -r requirements.txt
-```
-
-## Test ingestion before running the full agent
-
-```powershell
-python test_ingestion.py
-```
-
-This should report 13 product chunks for the supplied knowledge base.
-
-## Run the agent
-
-```powershell
-python qa_agent.py
-```
-
-Type `exit` or `quit` to end the session.
