@@ -1,0 +1,6 @@
+langchain
+langchain-core
+langchain-huggingface
+chromadb
+sentence-transformers
+rank-bm25
