@@ -1,7 +1,7 @@
 import re
 from typing import List, Optional
 
-from memory import ConversationMemory
+from .memory import ConversationMemory
 
 
 class FollowUpResolution:

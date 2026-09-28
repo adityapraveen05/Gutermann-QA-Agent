@@ -1,5 +1,5 @@
-from vector_store import VectorStore
-from retrieval import HybridRetriever
+from src.vector_store import VectorStore
+from src.retrieval import HybridRetriever
 
 
 def print_results(

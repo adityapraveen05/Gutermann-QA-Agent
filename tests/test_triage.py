@@ -1,4 +1,4 @@
-from triage import TriageService
+from src.triage import TriageService
 
 
 def main():

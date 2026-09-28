@@ -1,18 +1,20 @@
-from pathlib import Path
 import re
 from typing import List
 
 from langchain_core.documents import Document
 
+from .config import KNOWLEDGE_BASE_PATH
 
-BASE_DIR = Path(__file__).resolve().parent
-KNOWLEDGE_BASE = BASE_DIR / "product_overview.md"
+
+KNOWLEDGE_BASE = KNOWLEDGE_BASE_PATH
 
 
 def clean_text(text: str) -> str:
     """Clean unnecessary Markdown whitespace while preserving content."""
+
     text = text.replace("\r\n", "\n")
     text = re.sub(r"\n{3,}", "\n\n", text)
+
     return text.strip()
 
 
@@ -32,11 +34,14 @@ def load_product_documents() -> List[Document]:
     """
 
     if not KNOWLEDGE_BASE.exists():
+
         raise FileNotFoundError(
             f"Knowledge base not found: {KNOWLEDGE_BASE}"
         )
 
-    content = KNOWLEDGE_BASE.read_text(encoding="utf-8")
+    content = KNOWLEDGE_BASE.read_text(
+        encoding="utf-8"
+    )
 
     lines = content.splitlines()
 
@@ -47,12 +52,16 @@ def load_product_documents() -> List[Document]:
     current_content = []
 
     def save_current_product():
-        nonlocal current_product, current_content
+
+        nonlocal current_product
+        nonlocal current_content
 
         if not current_product:
             return
 
-        body = clean_text("\n".join(current_content))
+        body = clean_text(
+            "\n".join(current_content)
+        )
 
         if not body:
             return
@@ -67,7 +76,10 @@ def load_product_documents() -> List[Document]:
             Document(
                 page_content=full_text,
                 metadata={
-                    "category": current_category or "Unknown",
+                    "category": (
+                        current_category
+                        or "Unknown"
+                    ),
                     "product": current_product,
                     "chunk_type": "product",
                 },
@@ -78,46 +90,93 @@ def load_product_documents() -> List[Document]:
         current_content = []
 
     for line in lines:
+
         stripped = line.strip()
 
+        # ----------------------------------------------------
         # Category heading
-        if stripped.startswith("## ") and not stripped.startswith("### "):
+        # ----------------------------------------------------
+
+        if (
+            stripped.startswith("## ")
+            and not stripped.startswith("### ")
+        ):
+
             save_current_product()
 
-            current_category = stripped[3:].strip()
+            current_category = (
+                stripped[3:].strip()
+            )
+
             continue
 
+        # ----------------------------------------------------
         # Product heading
+        # ----------------------------------------------------
+
         if stripped.startswith("### "):
+
             save_current_product()
 
-            current_product = stripped[4:].strip()
+            current_product = (
+                stripped[4:].strip()
+            )
+
             current_content = []
+
             continue
 
+        # ----------------------------------------------------
         # Ignore top-level title
+        # ----------------------------------------------------
+
         if stripped.startswith("# "):
             continue
 
-        # Add normal content only when inside a product
+        # ----------------------------------------------------
+        # Product content
+        # ----------------------------------------------------
+
         if current_product:
+
             current_content.append(line)
 
+    # --------------------------------------------------------
     # Save final product
+    # --------------------------------------------------------
+
     save_current_product()
 
     return documents
 
 
 if __name__ == "__main__":
+
     docs = load_product_documents()
 
-    print(f"Product chunks created: {len(docs)}")
+    print(
+        f"Product chunks created: {len(docs)}"
+    )
 
-    for i, doc in enumerate(docs, start=1):
+    for i, doc in enumerate(
+        docs,
+        start=1,
+    ):
+
         print("\n" + "=" * 70)
+
         print(f"Chunk {i}")
-        print(f"Category : {doc.metadata['category']}")
-        print(f"Product  : {doc.metadata['product']}")
+
+        print(
+            f"Category : "
+            f"{doc.metadata['category']}"
+        )
+
+        print(
+            f"Product  : "
+            f"{doc.metadata['product']}"
+        )
+
         print("-" * 70)
+
         print(doc.page_content)

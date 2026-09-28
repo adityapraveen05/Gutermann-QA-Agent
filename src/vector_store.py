@@ -2,11 +2,15 @@ from pathlib import Path
 from typing import List
 
 import chromadb
-
 from langchain_core.documents import Document
 from langchain_huggingface import HuggingFaceEmbeddings
 
-from ingestion import load_product_documents
+from .config import (
+    CHROMA_COLLECTION_NAME,
+    CHROMA_PATH,
+    EMBEDDING_MODEL,
+)
+from .ingestion import load_product_documents
 
 
 BASE_DIR = Path(__file__).resolve().parent

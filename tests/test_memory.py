@@ -1,5 +1,5 @@
-from memory import ConversationMemory
-from follow_up import FollowUpResolver
+from src.memory import ConversationMemory
+from src.follow_up import FollowUpResolver
 
 
 def print_result(

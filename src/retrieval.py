@@ -3,7 +3,7 @@ from typing import Dict, List, Tuple
 from rank_bm25 import BM25Okapi
 from langchain_core.documents import Document
 
-from vector_store import VectorStore
+from .vector_store import VectorStore
 
 
 class HybridRetriever:
@@ -25,6 +25,7 @@ class HybridRetriever:
         vector_weight: float = 0.5,
         bm25_weight: float = 0.5,
     ):
+
         self.vector_store = vector_store
 
         self.vector_k = vector_k
@@ -43,17 +44,14 @@ class HybridRetriever:
     # ============================================================
 
     @staticmethod
-    def _tokenize(text: str) -> List[str]:
-        """
-        Basic tokenization used by BM25.
-        """
+    def _tokenize(
+        text: str,
+    ) -> List[str]:
+        """Basic tokenization used by BM25."""
 
         return text.lower().split()
 
     def _build_bm25_index(self):
-        """
-        Load all documents from ChromaDB and build the BM25 index.
-        """
 
         stored = self.vector_store.collection.get(
             include=[
@@ -84,13 +82,16 @@ class HybridRetriever:
         ]
 
         if not self.documents:
+
             raise ValueError(
                 "No documents found in ChromaDB. "
                 "Run vector_store.rebuild() first."
             )
 
         tokenized_documents = [
-            self._tokenize(document.page_content)
+            self._tokenize(
+                document.page_content
+            )
             for document in self.documents
         ]
 
@@ -106,9 +107,6 @@ class HybridRetriever:
     def _normalize_scores(
         scores: Dict[str, float],
     ) -> Dict[str, float]:
-        """
-        Normalize scores to the 0-1 range using min-max scaling.
-        """
 
         if not scores:
             return {}
@@ -121,6 +119,7 @@ class HybridRetriever:
         maximum = max(values)
 
         if maximum == minimum:
+
             return {
                 key: 1.0
                 for key in scores
@@ -129,7 +128,8 @@ class HybridRetriever:
         return {
             key: (
                 value - minimum
-            ) / (
+            )
+            / (
                 maximum - minimum
             )
             for key, value in scores.items()
@@ -143,9 +143,6 @@ class HybridRetriever:
     def _document_id(
         document: Document,
     ) -> str:
-        """
-        Create a stable identifier for a product document.
-        """
 
         product = document.metadata.get(
             "product",
@@ -157,7 +154,9 @@ class HybridRetriever:
             "",
         )
 
-        return f"{category}::{product}"
+        return (
+            f"{category}::{product}"
+        )
 
     # ============================================================
     # VECTOR SEARCH
@@ -167,9 +166,6 @@ class HybridRetriever:
         self,
         query: str,
     ) -> List[Tuple[Document, float]]:
-        """
-        Retrieve documents using dense vector similarity.
-        """
 
         query_embedding = (
             self.vector_store.embeddings.embed_query(
@@ -181,10 +177,7 @@ class HybridRetriever:
             query_embeddings=[
                 query_embedding
             ],
-            n_results=min(
-                self.vector_k,
-                len(self.documents),
-            ),
+            n_results=self.vector_k,
             include=[
                 "documents",
                 "metadatas",
@@ -192,42 +185,48 @@ class HybridRetriever:
             ],
         )
 
+        documents = (
+            results.get(
+                "documents",
+                [[]],
+            )[0]
+        )
+
+        metadatas = (
+            results.get(
+                "metadatas",
+                [[]],
+            )[0]
+        )
+
+        distances = (
+            results.get(
+                "distances",
+                [[]],
+            )[0]
+        )
+
         output = []
-
-        documents = results.get(
-            "documents",
-            [[]],
-        )[0]
-
-        metadatas = results.get(
-            "metadatas",
-            [[]],
-        )[0]
-
-        distances = results.get(
-            "distances",
-            [[]],
-        )[0]
 
         for text, metadata, distance in zip(
             documents,
             metadatas,
             distances,
         ):
+
             document = Document(
                 page_content=text,
                 metadata=metadata,
             )
 
-            # Convert Chroma distance into a simple similarity score.
-            similarity = 1.0 / (
-                1.0 + float(distance)
+            score = 1.0 / (
+                1.0 + distance
             )
 
             output.append(
                 (
                     document,
-                    similarity,
+                    score,
                 )
             )
 
@@ -241,16 +240,16 @@ class HybridRetriever:
         self,
         query: str,
     ) -> List[Tuple[Document, float]]:
-        """
-        Retrieve documents using BM25 lexical matching.
-        """
 
-        query_tokens = self._tokenize(
+        if not self.bm25:
+            return []
+
+        tokenized_query = self._tokenize(
             query
         )
 
         scores = self.bm25.get_scores(
-            query_tokens
+            tokenized_query
         )
 
         ranked_indices = sorted(
@@ -262,8 +261,9 @@ class HybridRetriever:
         output = []
 
         for index in ranked_indices[
-            : self.bm25_k
+            :self.bm25_k
         ]:
+
             output.append(
                 (
                     self.documents[index],
@@ -282,45 +282,26 @@ class HybridRetriever:
         query: str,
         top_k: int = 4,
     ) -> List[Tuple[Document, float]]:
-        """
-        Combine vector and BM25 retrieval.
 
-        Vector and BM25 scores are independently normalized
-        before applying their configured weights.
-
-        Final score:
-
-            hybrid_score =
-                vector_weight * normalized_vector_score
-                +
-                bm25_weight * normalized_bm25_score
-        """
-
-        vector_results = self.vector_search(
-            query
+        vector_results = (
+            self.vector_search(query)
         )
 
-        bm25_results = self.bm25_search(
-            query
+        bm25_results = (
+            self.bm25_search(query)
         )
-
-        # --------------------------------------------------------
-        # Store scores by stable document ID
-        # --------------------------------------------------------
 
         vector_scores = {
             self._document_id(document): score
-            for document, score in vector_results
+            for document, score
+            in vector_results
         }
 
         bm25_scores = {
             self._document_id(document): score
-            for document, score in bm25_results
+            for document, score
+            in bm25_results
         }
-
-        # --------------------------------------------------------
-        # Normalize individual retrieval scores
-        # --------------------------------------------------------
 
         normalized_vector = (
             self._normalize_scores(
@@ -334,35 +315,29 @@ class HybridRetriever:
             )
         )
 
-        # --------------------------------------------------------
-        # Combine documents from both retrieval methods
-        # --------------------------------------------------------
-
-        documents_by_id: Dict[
-            str,
-            Document,
-        ] = {}
+        documents_by_id = {}
 
         for document, _ in vector_results:
+
             documents_by_id[
                 self._document_id(document)
             ] = document
 
         for document, _ in bm25_results:
+
             documents_by_id[
                 self._document_id(document)
             ] = document
 
-        # --------------------------------------------------------
-        # Calculate hybrid scores
-        # --------------------------------------------------------
+        combined_scores = {}
 
-        combined_scores: Dict[
-            str,
-            float,
-        ] = {}
+        all_ids = set(
+            normalized_vector
+        ) | set(
+            normalized_bm25
+        )
 
-        for document_id in documents_by_id:
+        for document_id in all_ids:
 
             vector_score = (
                 normalized_vector.get(
@@ -388,84 +363,17 @@ class HybridRetriever:
                 * bm25_score
             )
 
-        # --------------------------------------------------------
-        # Rank by combined score
-        # --------------------------------------------------------
-
         ranked = sorted(
             combined_scores.items(),
             key=lambda item: item[1],
             reverse=True,
         )
 
-        # --------------------------------------------------------
-        # Return controlled TOP_K results
-        # --------------------------------------------------------
-
         return [
             (
-                documents_by_id[
-                    document_id
-                ],
+                documents_by_id[document_id],
                 score,
             )
-            for document_id, score in ranked[
-                :top_k
-            ]
+            for document_id, score
+            in ranked[:top_k]
         ]
-
-
-# ============================================================
-# Standalone Retrieval Test
-# ============================================================
-
-if __name__ == "__main__":
-
-    store = VectorStore()
-
-    retriever = HybridRetriever(
-        vector_store=store,
-    )
-
-    query = (
-        "Which products use True Sound Sensors?"
-    )
-
-    results = retriever.hybrid_search(
-        query=query,
-        top_k=4,
-    )
-
-    print("\n" + "=" * 80)
-    print("HYBRID RETRIEVAL TEST")
-    print("=" * 80)
-
-    print(f"Query: {query}")
-
-    for rank, (
-        document,
-        score,
-    ) in enumerate(
-        results,
-        start=1,
-    ):
-
-        print("\n" + "-" * 80)
-
-        print(
-            f"Rank     : {rank}"
-        )
-
-        print(
-            f"Score    : {score:.4f}"
-        )
-
-        print(
-            f"Product  : "
-            f"{document.metadata.get('product')}"
-        )
-
-        print(
-            f"Category : "
-            f"{document.metadata.get('category')}"
-        )

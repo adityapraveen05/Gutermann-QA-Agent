@@ -5,7 +5,7 @@ from typing import List
 
 from langchain_core.documents import Document
 
-from config import OLLAMA_MODEL, OLLAMA_BASE_URL
+from .config import OLLAMA_MODEL, OLLAMA_BASE_URL
 
 
 class OllamaGenerationError(Exception):

@@ -5,7 +5,8 @@ from pathlib import Path
 # Paths
 # ============================================================
 
-BASE_DIR = Path(__file__).resolve().parent
+# Project root directory.
+BASE_DIR = Path(__file__).resolve().parent.parent
 
 KNOWLEDGE_BASE_PATH = BASE_DIR / "product_overview.md"
 CHROMA_PATH = BASE_DIR / "chroma_db"
