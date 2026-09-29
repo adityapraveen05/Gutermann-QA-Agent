@@ -64,4 +64,5 @@ Gutermann-QA-Agent/
 ├── product_overview.md
 ├── requirements.txt
 ├── README.md
+├── qa_agent.py
 └── .gitignore
